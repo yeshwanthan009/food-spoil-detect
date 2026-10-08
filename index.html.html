@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mission Food Spoilage Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#080D1B;--panel:#111A31;--ink:#E7EDFB;--muted:#93A1C0;--line:#243252;--accent:#5CC8FF;
+ --fresh:#4ADE9A;--soon:#F5B84A;--spoiled:#FF7272;--fresh-bg:#0F2F2A;--soon-bg:#33290F;--spoiled-bg:#3A1A24;
+ color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:smooth}
+*{box-sizing:border-box}
+body{margin:0;color:var(--ink);font:400 17px/1.6 Figtree,system-ui,sans-serif;
+ background:var(--bg) radial-gradient(1px 1px at 12% 18%,#fff8 50%,transparent),radial-gradient(1px 1px at 78% 9%,#fff7 50%,transparent),radial-gradient(1.5px 1.5px at 40% 40%,#9cf8 50%,transparent),radial-gradient(1px 1px at 90% 55%,#fff6 50%,transparent),radial-gradient(1px 1px at 22% 72%,#fff6 50%,transparent),radial-gradient(1px 1px at 63% 85%,#fff7 50%,transparent);background-repeat:no-repeat;background-size:100% 900px}
+h1,h2,h3{font-family:'Space Grotesk',Figtree,sans-serif;line-height:1.1;margin:0;letter-spacing:-.02em}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+nav b{font:700 18px 'Space Grotesk',sans-serif}
+nav a{color:var(--muted);text-decoration:none;margin-left:20px;font-size:15px}
+nav a:hover{color:var(--ink)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.hero{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:center;padding:40px 0 80px}
+.hero h1{font-size:clamp(36px,5vw,56px)}
+.hero p{color:var(--muted);max-width:44ch;margin:18px 0 0;font-size:19px}
+.clock{margin-top:34px;padding:18px 22px;border:1px solid var(--line);border-radius:16px;background:#0d1530aa;display:inline-block;min-width:260px}
+.clock small{display:block;color:var(--muted);font-size:14px}
+#met{font:700 34px 'Space Grotesk',sans-serif;font-variant-numeric:tabular-nums;color:var(--accent)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px}
+label{display:block;font-weight:600;font-size:15px;margin:0 0 6px}
+select,input[type=number],input[type=text],input[type=datetime-local]{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#0B1226;color:var(--ink);font:inherit}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.field{margin-bottom:16px}.row{display:grid;grid-template-columns:1fr 120px;gap:10px}.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tempval{float:right;font-weight:600;color:var(--accent)}
+button.go{width:100%;padding:14px;border:0;border-radius:12px;background:var(--accent);color:#06101F;font:600 17px Figtree,sans-serif;cursor:pointer}
+button.go:hover{filter:brightness(1.08)}button.go.small{width:auto;padding:10px 18px;font-size:15px}
+#result{margin-top:20px;border-radius:14px;padding:20px;display:none;animation:pop .35s ease}
+@keyframes pop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){#result{animation:none}html{scroll-behavior:auto}.bar i{transition:none}}
+#result h3{font-size:30px}#result .meta{margin:6px 0 14px;font-size:15px;color:var(--muted)}
+.bar{height:10px;border-radius:99px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;width:0;border-radius:99px;transition:width .6s ease}
+.note{font-size:13px;color:var(--muted);margin-top:14px}.err{color:var(--spoiled);font-size:14px;margin-top:6px}
+.alert{border-radius:12px;padding:14px 18px;margin:0 0 12px;font-size:15px}.alert ul{margin:6px 0 0;padding-left:20px}
+.alert.soon{background:var(--soon-bg);color:var(--soon)}.alert.spoiled{background:var(--spoiled-bg);color:var(--spoiled)}.alert a{color:inherit}
+section{padding:72px 0;border-top:1px solid var(--line)}
+section h2{font-size:clamp(28px,4vw,40px);margin-bottom:12px}
+.lead{color:var(--muted);max-width:58ch;margin:0 0 32px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.three h3,.two h3{font-size:21px;margin-bottom:8px}.three p{margin:0;color:var(--muted);font-size:16px}
+.two ul{margin:0;padding-left:20px;color:var(--muted)}.two li{margin-bottom:6px}
+.flow{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;counter-reset:s}
+.flow li{counter-increment:s;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+.flow li::before{content:counter(s);display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#16345A;color:var(--accent);font-weight:600;font-size:14px;margin-bottom:10px}
+.flow b{display:block;font:700 19px 'Space Grotesk',sans-serif}.flow span{color:var(--muted);font-size:15px}
+.impact{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.impact div{border-left:3px solid var(--accent);padding-left:14px;font-weight:500}
+.notify{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:16px 0}#nstat{font-size:14px;color:var(--muted)}
+.tablewrap{overflow-x:auto;margin-top:16px}table{width:100%;border-collapse:collapse;font-size:15px;min-width:780px}
+th,td{text-align:left;padding:12px 10px;border-bottom:1px solid var(--line);vertical-align:top}th{font-weight:600;color:var(--muted)}td small{color:var(--muted)}
+.pill{padding:4px 12px;border-radius:99px;font-weight:600;font-size:14px}.pill.fresh{background:var(--fresh-bg);color:var(--fresh)}.pill.soon{background:var(--soon-bg);color:var(--soon)}.pill.spoiled{background:var(--spoiled-bg);color:var(--spoiled)}
+.x,.ghost{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:6px 12px;font:inherit;font-size:14px;cursor:pointer}.x:hover,.ghost:hover{color:var(--spoiled);border-color:var(--spoiled)}.ghost{margin-top:16px}
+footer{border-top:1px solid var(--line);padding:36px 0 48px;color:var(--muted);font-size:15px}footer b{color:var(--ink)}
+@media (max-width:820px){.hero,.two,.three,.flow{grid-template-columns:1fr}.impact{grid-template-columns:1fr 1fr}nav a{margin-left:12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav><b>Mission Food Predictor</b><div><a href="#archive">Stowage log</a><a href="#space">Why space</a><a href="#how">How it works</a></div></nav>
+  <div id="alerts" aria-live="polite"></div>
+  <header class="hero">
+    <div>
+      <h1>Know which mission food to eat first.</h1>
+      <p>For crews on a station, in transit or on a surface. Choose a food, where it is stowed and for how long. Get a clear answer: fresh, use soon, or spoiled.</p>
+      <div class="clock"><small id="mn">Mission elapsed time</small><span id="met">0 d 00:00:00</span></div>
+    </div>
+    <div class="card">
+      <div class="field"><label for="food">Food</label><select id="food"></select></div>
+      <div class="field" id="customBox" hidden>
+        <div class="row2"><input id="cname" type="text" placeholder="Food name" aria-label="Custom food name"><input id="cdays" type="number" min="0.1" step="any" placeholder="Days fresh at 4 °C" aria-label="Days fresh at 4 degrees"></div>
+        <div class="err" id="cerr"></div>
+      </div>
+      <div class="field"><label for="loc">Stowage location</label>
+        <select id="loc"><option value="22">Cabin ambient (22 °C)</option><option value="4">Cold stowage (4 °C)</option><option value="-20">Freezer (-20 °C)</option><option value="custom">Custom temperature…</option></select></div>
+      <div class="field" id="tempBox" hidden><label for="temp">Temperature <span class="tempval" id="tv">4 °C</span></label><input type="range" id="temp" min="-20" max="40" value="4"></div>
+      <div class="field"><label for="env">Mission environment</label>
+        <select id="env"><option value="1.1">Low Earth orbit station</option><option value="1.3">Deep-space transit</option><option value="1.4">Lunar surface</option><option value="1.4">Mars surface</option></select></div>
+      <div class="field"><label for="time">Time already stowed</label>
+        <div class="row"><input id="time" type="number" min="0" value="3" step="any"><select id="unit" aria-label="Time unit"><option value="1">hours</option><option value="24" selected>days</option><option value="720">months</option></select></div></div>
+      <div class="field"><label for="qty">Quantity in grams (optional)</label><input id="qty" type="number" min="0" step="any" placeholder="e.g. 250"></div>
+      <button class="go" id="go">Check and log</button>
+      <div id="result" role="status" aria-live="polite"><h3 id="rt"></h3><div class="meta" id="rm"></div><div class="bar"><i id="rb"></i></div><p id="rr" style="margin:14px 0 0"></p></div>
+      <p class="note">Each check is logged on this device. Shelf-life values are illustrative, not NASA data. Validate them before real mission use.</p>
+    </div>
+  </header>
+</div>
+
+<section id="archive"><div class="wrap">
+  <h2>Stowage log and reminders</h2>
+  <p class="lead">Every check is logged by mission day. You get a reminder 2 days before an item is expected to expire.</p>
+  <div class="card" style="margin-bottom:16px">
+    <div class="three">
+      <div><label for="mname">Mission name</label><input id="mname" type="text" placeholder="e.g. Artemis demo"></div>
+      <div><label for="mstart">Mission start (launch)</label><input id="mstart" type="datetime-local"></div>
+      <div><label for="mres">Next resupply, mission day</label><input id="mres" type="number" min="1" step="1" placeholder="e.g. 90"></div>
+    </div>
+  </div>
+  <div class="card" id="insights"></div>
+  <div class="notify"><button class="go small" id="notifyBtn">Turn on notifications</button><button class="ghost" id="testBtn" hidden style="margin:0">Send test</button><span id="nstat"></span></div>
+  <p id="empty" class="lead">Nothing logged yet. Run a check above to start the log.</p>
+  <div class="tablewrap"><table id="atable" hidden><thead><tr><th>Food</th><th>Qty</th><th>Stowage</th><th>Stowed</th><th>Expires</th><th>Status</th><th></th></tr></thead><tbody id="abody"></tbody></table></div>
+  <button class="ghost" id="clear" hidden>Clear log</button>
+</div></section>
+
+<section id="space"><div class="wrap">
+  <h2>Built for life away from Earth</h2>
+  <p class="lead">On a station or a Mars transit, food cannot be replaced on demand. Knowing what goes off first keeps menus on track.</p>
+  <div class="three">
+    <div class="card"><h3>Limited resupply</h3><p>Enter the mission day of the next cargo flight. The log lists what will expire before it arrives, so the crew eats it first.</p></div>
+    <div class="card"><h3>Every gram counts</h3><p>Log quantities to see how much food is tracked, expiring soon or already past its limit.</p></div>
+    <div class="card"><h3>Works offline</h3><p>Nothing is sent to a server. The log stays on the device, and a saved copy of the page runs without internet.</p></div>
+  </div>
+  <p class="note" style="margin-top:20px">The model adjusts for cabin, cold or freezer stowage, packaging (sealed pouch, freeze-dried, opened or rehydrated), and a higher spoilage factor for radiation-exposed environments.</p>
+</div></section>
+
+<section id="how"><div class="wrap">
+  <h2>How it works</h2>
+  <p class="lead">Each check passes through the same six steps.</p>
+  <ol class="flow">
+    <li><b>Crew input</b><span>Food, stowage location, mission environment, time and quantity.</span></li>
+    <li><b>Mission log</b><span>Entries are timestamped against mission elapsed time.</span></li>
+    <li><b>Preprocessing</b><span>Values are converted to a common reference temperature.</span></li>
+    <li><b>ML model</b><span>The model weighs temperature, packaging and radiation exposure.</span></li>
+    <li><b>Spoilage prediction</b><span>Fresh, Use Soon or Spoiled, with time remaining.</span></li>
+    <li><b>Alert and menu priority</b><span>Reminders 2 days ahead and an eat-first list before resupply.</span></li>
+  </ol>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Feasibility, viability and impact</h2>
+  <p class="lead">Software only, so it adds no launch mass and runs on hardware a crew already has.</p>
+  <div class="two" style="margin-bottom:28px">
+    <div class="card"><h3>Feasibility</h3><ul><li>Fully software-based application</li><li>No sensors or extra hardware</li><li>Built on food-spoilage datasets</li></ul></div>
+    <div class="card"><h3>Viability</h3><ul><li>Clear result: Fresh, Use Soon or Spoiled</li><li>Cuts unnecessary food waste</li><li>Easy to scale and improve</li><li>Low cost because it is software-only</li></ul></div>
+  </div>
+  <div class="impact"><div>Reduces food waste</div><div>Reduces mass and cost loss</div><div>Improves food management</div><div>Supports long-duration missions</div><div>Encourages data-driven decisions</div></div>
+</div></section>
+
+<footer><div class="wrap"><b>SEDHACKS'26</b>, Rajalakshmi Engineering College, SEDS REC Chapter<br>Track: Medical, Food &amp; Agriculture in Space. Category: Software. Team lead: Yogeshwaran A</div></footer>
+
+<script>
+const $=id=>document.getElementById(id),mem={};
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return k in mem?mem[k]:d}},set(k,v){mem[k]=v;try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const amb=d=>d*Math.pow(2.2,1.8); // shelf life at 22 °C converted to the 4 °C reference
+const GROUPS={"Packaged space food":{"Thermostabilized meal pouch":amb(540),"Freeze-dried meal (sealed)":amb(1095),"Irradiated meat pouch":amb(730),"Crumb-free tortillas":amb(365),"Snack bars and nuts":amb(300),"Drink powder (sealed)":amb(730),"Rehydrated meal (opened)":amb(0.17),"Opened pouch leftovers":amb(0.5)},
+ "Grown onboard":{"Lettuce":6,"Radish":14,"Dwarf tomato":10},"Fresh resupply":{"Apples":28,"Oranges":21,"Carrots":21}};
+const ALL=Object.assign({},...Object.values(GROUPS));
+let custom=store.get("fsp-custom",{}),archive=store.get("fsp-archive",[]),notified=store.get("fsp-notified",[]);
+let M=store.get("fsp-m",null);if(!M){M={start:Date.now(),name:"",resup:""};store.set("fsp-m",M)}
+const H=36e5,days=f=>custom[f]??ALL[f];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const lifeH=(d,T,env=1)=>{let l=d*24*Math.pow(2.2,(4-T)/10);if(T<=-18)l*=6;return l/env};
+function fmt(h){h=Math.abs(h);if(h<1)return "less than an hour";if(h<48)return Math.round(h)+" hours";const d=h/24;return (d<10?d.toFixed(1):Math.round(d))+" days"}
+const dt=t=>new Date(t).toLocaleString([],{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+const md=t=>{const d=(t-M.start)/864e5;return d>=0?"Day "+(Math.floor(d)+1):"T-"+Math.ceil(-d)+" d"};
+const status=r=>r<0.6?["Fresh","fresh"]:r<1?["Use soon","soon"]:["Spoiled","spoiled"];
+const getTemp=()=>$("loc").value==="custom"?+$("temp").value:+$("loc").value;
+function tick(){const ms=Date.now()-M.start,a=Math.abs(ms),p=n=>String(n).padStart(2,"0");
+  $("met").textContent=(ms<0?"T-":"")+`${Math.floor(a/864e5)} d ${p(Math.floor(a%864e5/H))}:${p(Math.floor(a%H/6e4))}:${p(Math.floor(a%6e4/1e3))}`;
+  $("mn").textContent=M.name?M.name+", mission elapsed time":"Mission elapsed time"}
+function renderSelect(sel){
+  const grp=(l,o)=>o.length?`<optgroup label="${l}">${o.map(f=>`<option>${esc(f)}</option>`).join("")}</optgroup>`:"";
+  $("food").innerHTML=Object.entries(GROUPS).map(([g,o])=>grp(g,Object.keys(o))).join("")+grp("My mission foods",Object.keys(custom))+`<option value="__custom">+ Add a custom food…</option>`;
+  if(sel)$("food").value=sel;$("customBox").hidden=$("food").value!=="__custom"}
+$("food").onchange=()=>{$("customBox").hidden=$("food").value!=="__custom";if(!$("customBox").hidden)$("cname").focus()};
+$("loc").onchange=()=>{$("tempBox").hidden=$("loc").value!=="custom"};
+$("temp").oninput=()=>$("tv").textContent=$("temp").value+" °C";
+
+function check(){
+  let food=$("food").value;const T=getTemp(),env=+$("env").value,hrs=(+$("time").value||0)*(+$("unit").value);
+  if(food==="__custom"){const n=$("cname").value.trim(),d=+$("cdays").value;
+    if(!n||!(d>0)){$("cerr").textContent="Enter a food name and how many days it stays fresh at 4 °C.";return}
+    $("cerr").textContent="";custom[n]=d;store.set("fsp-custom",custom);food=n;$("cname").value="";$("cdays").value="";renderSelect(n)}
+  const life=lifeH(days(food),T,env),ratio=hrs/life,[state,color]=status(ratio);
+  const msg={fresh:"Safe to keep. Keep it stowed at this temperature and use it within the window.",soon:"Plan it into the next menus, or move it to colder stowage to slow spoilage.",spoiled:"Do not eat it. Seal it in a waste bag and wipe the stowage area."}[color];
+  const r=$("result");r.style.display="block";r.style.background=`var(--${color}-bg)`;
+  $("rt").textContent=state;$("rt").style.color=`var(--${color})`;
+  $("rm").textContent=ratio>=1?`Past its estimated limit of ${fmt(life)} by ${fmt(hrs-life)}.`:`About ${fmt(life-hrs)} left at ${T} °C (limit ${fmt(life)}).`;
+  const b=$("rb");b.style.background=`var(--${color})`;b.style.width="0";requestAnimationFrame(()=>b.style.width=Math.min(100,ratio*100)+"%");
+  $("rr").textContent=msg;
+  const loc=$("loc").value==="custom"?`Custom ${T} °C`:$("loc").selectedOptions[0].text;
+  archive=[{id:Date.now(),food,days:days(food),temp:T,env,loc,qty:+$("qty").value||0,storedAt:Date.now()-hrs*H},...archive].slice(0,200);
+  store.set("fsp-archive",archive);render()}
+$("go").onclick=check;
+
+function info(e){const life=lifeH(e.days,e.temp,e.env||1),exp=e.storedAt+life*H;return{exp,left:(exp-Date.now())/H,st:status((Date.now()-e.storedAt)/H/life)}}
+const fg=x=>x>=1000?(x/1000).toFixed(1)+" kg":Math.round(x)+" g";
+function render(){
+  const rows=archive.map(e=>({e,i:info(e)})).sort((a,b)=>a.i.exp-b.i.exp);
+  const due=rows.filter(r=>r.i.left>0&&r.i.left<=48),gone=rows.filter(r=>r.i.left<=0);
+  let a="";
+  if(due.length)a+=`<div class="alert soon"><b>Reminder: ${due.length} item${due.length>1?"s":""} expiring within 2 days</b><ul>${due.map(r=>`<li>${esc(r.e.food)} expires in ${fmt(r.i.left)} (${md(r.i.exp)})${r.e.qty?`, ${r.e.qty} g`:""}</li>`).join("")}</ul></div>`;
+  if(gone.length)a+=`<div class="alert spoiled">${gone.length} logged item${gone.length>1?"s have":" has"} passed its estimated limit. See the <a href="#archive">stowage log</a>.</div>`;
+  $("alerts").innerHTML=a;notifyDue(due);
+  $("abody").innerHTML=rows.map(({e,i})=>`<tr><td>${esc(e.food)}</td><td>${e.qty?e.qty+" g":"-"}</td><td>${esc(e.loc||e.temp+" °C")}</td><td>${md(e.storedAt)}<br><small>${dt(e.storedAt)}</small></td><td>${md(i.exp)}<br><small>${dt(i.exp)}</small></td><td><span class="pill ${i.st[1]}">${i.st[0]}</span></td><td><button class="x" data-id="${e.id}" aria-label="Delete ${esc(e.food)}">Delete</button></td></tr>`).join("");
+  $("empty").hidden=rows.length>0;$("atable").hidden=!rows.length;$("clear").hidden=!rows.length;
+  if(!rows.length){$("insights").innerHTML="Checks are logged here automatically. Reminders and the eat-first list appear once items are logged.";return}
+  const g=a=>a.reduce((s,r)=>s+(r.e.qty||0),0),cnt={};archive.forEach(e=>cnt[e.food]=(cnt[e.food]||0)+1);
+  const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+  let t=`<b>${archive.length}</b> checks logged. Most checked: <b>${esc(top[0])}</b> (${top[1]}×).`;
+  if(g(rows))t+=` Food tracked: <b>${fg(g(rows))}</b>, with <b>${fg(g(due))}</b> expiring within 2 days and <b>${fg(g(gone))}</b> already past its limit.`;
+  const rt=+M.resup>0?M.start+(M.resup-1)*864e5:0;
+  if(rt>Date.now()){const risk=rows.filter(r=>r.i.left>0&&r.i.exp<rt);
+    t+=risk.length?` <b>Eat first:</b> ${risk.slice(0,4).map(r=>esc(r.e.food)).join(", ")} will expire before the resupply on ${md(rt)}.`:` Nothing logged expires before the resupply on ${md(rt)}.`}
+  else if(due.length)t+=` <b>${esc(due[0].e.food)}</b> expires first, so use it next.`;
+  $("insights").innerHTML=t}
+$("abody").onclick=ev=>{const id=ev.target.dataset&&ev.target.dataset.id;if(!id)return;archive=archive.filter(e=>String(e.id)!==id);store.set("fsp-archive",archive);render()};
+$("clear").onclick=()=>{if(confirm("Delete the whole stowage log?")){archive=[];store.set("fsp-archive",archive);render()}};
+
+// mission settings
+const loc2=t=>new Date(t-new Date(t).getTimezoneOffset()*6e4).toISOString().slice(0,16);
+$("mname").value=M.name;$("mstart").value=loc2(M.start);$("mres").value=M.resup;
+const sv=()=>{store.set("fsp-m",M);tick();render()};
+$("mname").oninput=()=>{M.name=$("mname").value;sv()};
+$("mres").oninput=()=>{M.resup=$("mres").value;sv()};
+$("mstart").onchange=()=>{const t=new Date($("mstart").value).getTime();if(!isNaN(t)){M.start=t;sv()}};
+
+// notifications
+const canN=()=>"Notification" in window;
+function nUI(){if(!canN()){$("nstat").textContent="This browser does not support notifications.";$("notifyBtn").hidden=true;return}
+  const p=Notification.permission;$("notifyBtn").hidden=p==="granted";$("testBtn").hidden=p!=="granted";
+  $("nstat").textContent=p==="granted"?"Notifications are on. Keep this page open in a tab to receive them.":p==="denied"?"Notifications are blocked. Allow them in browser site settings, or open this page in its own tab.":""}
+function notify(t,b,tag){try{new Notification(t,{body:b,tag})}catch(e){$("nstat").textContent="The browser blocked the notification. Open this page in its own tab and try again."}}
+function notifyDue(due){if(!canN()||Notification.permission!=="granted")return;
+  due.filter(r=>!notified.includes(r.e.id)).forEach(r=>{notify("Mission food expiring soon",`${r.e.food} expires in ${fmt(r.i.left)} (${md(r.i.exp)}).`,"fsp-"+r.e.id);notified.push(r.e.id)});
+  store.set("fsp-notified",notified.slice(-300))}
+$("notifyBtn").onclick=async()=>{try{await Notification.requestPermission()}catch(e){}nUI();if(canN()&&Notification.permission==="granted"){notify("Notifications on","You will be alerted 2 days before logged food expires.","fsp-on");render()}};
+$("testBtn").onclick=()=>notify("Mission Food Predictor","Test alert: reminders are working.","fsp-test");
+nUI();renderSelect();render();tick();setInterval(tick,1000);setInterval(render,60000);
+</script>
+</body>
+</html>
